@@ -3,7 +3,7 @@
 **Institution:** SIMATS Engineering  
 **Student Name:** Logeshwaran R  
 **Register Number:** 192511175  
-**Repository Name:** `CSA09-192511175-Assignment1`  
+**Repository Name:** `CSA0914-192511175-ASSIGNMENT1`  
 **Java Version:** OpenJDK 21.0.12.1 LTS (Microsoft HotSpot build 21.0.12.1+1-LTS)  
 **Operating System:** Windows 11  
 
@@ -213,12 +213,12 @@ java Task12.Day4DesignChallenge
 To push this local repository to your remote GitHub account:
 ```bash
 # 1. Add your remote repository URL
-git remote add origin https://github.com/<your-username>/CSA09-192511175-Assignment1.git
+git remote add origin https://github.com/logeswaranraj27/JAVA-PROGRAMING.git
 
-# 2. Rename branch to main (if not already main)
-git branch -M main
+# 2. Checkout the assignment branch
+git checkout -b CSA0914-192511175-ASSIGNMENT1
 
-# 3. Push all progressive commits to GitHub
-git push -u origin main
+# 3. Push progressive commits to GitHub
+git push -u origin CSA0914-192511175-ASSIGNMENT1
 ```
 The commit history will demonstrate progressive task-by-task engineering development ready for faculty evaluation and viva verification.
