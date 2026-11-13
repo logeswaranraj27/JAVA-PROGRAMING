@@ -74,3 +74,4 @@ public class LeaderboardDemo {
         System.out.println("3. Cobras is ranked 4th due to having the lowest points (6 points).");
     }
 }
+

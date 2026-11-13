@@ -38,3 +38,4 @@ public class Song {
         return title + " - " + artist + " [" + durationSeconds + "s]";
     }
 }
+

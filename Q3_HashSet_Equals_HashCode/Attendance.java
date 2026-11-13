@@ -50,3 +50,4 @@ public class Attendance {
         System.out.println("Unique students: " + present.size());
     }
 }
+

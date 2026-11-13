@@ -89,3 +89,4 @@ public class UpNextQueueEvaluation {
         return System.nanoTime() - start;
     }
 }
+

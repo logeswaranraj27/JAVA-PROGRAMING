@@ -51,3 +51,4 @@ public class Medicine implements Comparable<Medicine> {
                 code, name, stockQuantity, unitPrice, additionSequence);
     }
 }
+

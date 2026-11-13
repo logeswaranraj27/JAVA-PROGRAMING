@@ -155,3 +155,4 @@ public class AlternativeTriageComparison {
         System.out.println("--------------------------------------------------------------------------");
     }
 }
+

@@ -45,3 +45,4 @@ public class AttendanceInitial {
         System.out.println("Observation: 3 entries stored instead of 2. De-duplication failed!");
     }
 }
+

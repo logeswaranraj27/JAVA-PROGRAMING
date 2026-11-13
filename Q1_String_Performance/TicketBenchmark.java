@@ -24,21 +24,21 @@ public class TicketBenchmark {
 
         // Workload 2: 10,000 Tickets with 50 fields each
         System.out.println("\n>>> Running Workload 2: 10,000 Tickets (50 fields each)...");
-        runWorkload("Workload 2 (10,000 Tickets, 50 Fields)", 10000, 50, results);
+        runWorkload("Workload 2 (10000 Tickets 50 Fields)", 10000, 50, results);
 
         // Workload 3: Scaling fields on 1 Large Manifest Ticket (1000 and 5000 fields)
         System.out.println("\n>>> Running Workload 3A: 1 Manifest Ticket (1,000 fields)...");
-        runWorkload("Workload 3A (1 Ticket, 1,000 Fields)", 1, 1000, results);
+        runWorkload("Workload 3A (1 Ticket 1000 Fields)", 1, 1000, results);
 
         System.out.println("\n>>> Running Workload 3B: 1 Manifest Ticket (5,000 fields)...");
-        runWorkload("Workload 3B (1 Ticket, 5,000 Fields)", 1, 5000, results);
+        runWorkload("Workload 3B (1 Ticket 5000 Fields)", 1, 5000, results);
 
         // Export to CSV
         String csvPath = "Experimental_Data/Q1_string_performance.csv";
         try (PrintWriter pw = new PrintWriter(new FileWriter(csvPath))) {
             pw.println("Workload,Approach,Tickets,FieldsPerTicket,AvgTimeMs,TimePerTicketNs,EstIntermediateObjects,MemoryUsedMB");
             for (BenchmarkResult res : results) {
-                pw.printf("%s,%s,%d,%d,%.4f,%.2f,%d,%.2f\n",
+                pw.printf("\"%s\",%s,%d,%d,%.4f,%.2f,%d,%.2f\n",
                         res.workload, res.approach, res.tickets, res.fields,
                         res.avgTimeMs, res.timePerTicketNs, res.estObjects, res.memoryUsedMB);
             }

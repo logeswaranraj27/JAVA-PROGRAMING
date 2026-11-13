@@ -74,3 +74,4 @@ public class TicketGenerator {
         return String.format(formatBuilder.toString(), fields.toArray());
     }
 }
+

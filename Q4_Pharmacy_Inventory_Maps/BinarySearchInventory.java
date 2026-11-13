@@ -51,3 +51,4 @@ public class BinarySearchInventory {
 
     public int size() { return size; }
 }
+

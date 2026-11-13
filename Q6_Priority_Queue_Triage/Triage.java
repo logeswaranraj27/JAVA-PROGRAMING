@@ -73,3 +73,4 @@ public class Triage {
         System.out.println("3. Monotonically increasing arrival counter converts unstable heap ordering into strict FIFO fairness.");
     }
 }
+

@@ -84,3 +84,4 @@ public class MultithreadedLoggerDemo {
         System.out.println();
     }
 }
+
