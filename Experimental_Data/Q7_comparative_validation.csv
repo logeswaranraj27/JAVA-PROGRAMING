@@ -1,0 +1,9 @@
+Architecture,WorkloadSize,TotalTimeMs,AvgAdmitNs,AvgDispatchNs,TotalAgingTimeMs,MaxWaitS5Units
+Original PriorityQueue,1000,8.3703,6413.80,1682.60,0.5054,0
+Redesigned AF-MLBQ,1000,3.1961,2144.40,319.00,0.5516,0
+Original PriorityQueue,5000,8.9500,397.74,406.40,4.8792,1989
+Redesigned AF-MLBQ,5000,5.6808,479.08,149.52,1.4530,2754
+Original PriorityQueue,10000,22.9475,385.93,361.22,14.7913,2497
+Redesigned AF-MLBQ,10000,6.5637,213.30,105.98,2.2207,3943
+Original PriorityQueue,25000,66.3136,156.32,252.85,56.9977,6248
+Redesigned AF-MLBQ,25000,7.9674,112.36,33.59,3.0755,7758
