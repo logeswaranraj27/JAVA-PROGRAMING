@@ -5,12 +5,12 @@
 
 ### **Student & Course Metadata**
 - **Course Title:** Programming in Java
-- **Course Code:** CSA09
+- **Course Code:** CSA0914
 - **Assignment:** Assignment 2 (CO2: Sessions 15–26)
-- **Student Name:** [Student Name Placeholder]
-- **Register Number:** [Register Number Placeholder]
+- **Student Name:** Logeshwaran R
+- **Register Number:** 192511175
 - **Faculty / Guide:** Dr. MD BOOMIJA
-- **Repository Link:** `https://github.com/YourUsername/CSA09-YourRegisterNumber-Assignment2`
+- **Repository Link:** `https://github.com/logeswaranraj27/JAVA-PROGRAMING/tree/CSA0914-192511175-ASSIGNMENT2`
 - **Java Environment:** OpenJDK 21 LTS (Microsoft HotSpot build 21.0.12.1+1-LTS)
 - **Platform:** Windows x64
 

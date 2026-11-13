@@ -2,12 +2,12 @@
 
 ## Academic Information
 - **Course Title:** Programming in Java
-- **Course Code:** CSA09
+- **Course Code:** CSA0914
 - **Course Outcome:** CO2 (Sessions 15–26: Strings, Collections, Generics, Ordering)
-- **Student Name:** [Student Name Placeholder]
-- **Register Number:** [Register Number Placeholder]
+- **Student Name:** Logeshwaran R
+- **Register Number:** 192511175
 - **Faculty / Guide:** Dr. MD BOOMIJA
-- **Repository Name:** `CSA09-YourRegisterNumber-Assignment2`
+- **Repository Name:** `CSA0914-192511175-ASSIGNMENT2`
 - **Total Marks:** 50 Marks
 - **Java Environment:** OpenJDK 21 LTS (Microsoft HotSpot 64-Bit Server VM, build 21.0.12.1+1-LTS)
 - **Platform:** Windows x64
@@ -17,7 +17,7 @@
 ## 1. Project Directory Structure
 
 ```
-CSA09-YourRegisterNumber-Assignment2/
+CSA0914-192511175-ASSIGNMENT2/
 │
 ├── Q1_String_Performance/
 │   ├── TicketWorkload.java           # Realistic railway e-ticket data generator
@@ -103,7 +103,7 @@ CSA09-YourRegisterNumber-Assignment2/
 All programs can be compiled and executed using standard JDK 21 commands from the project root:
 
 ```powershell
-cd CSA09-YourRegisterNumber-Assignment2
+cd CSA0914-192511175-ASSIGNMENT2
 ```
 
 ### **Q1 – Building Text Under Load: String, StringBuilder or StringBuffer**
