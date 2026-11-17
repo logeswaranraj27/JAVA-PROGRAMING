@@ -6,7 +6,7 @@
 - **Course Outcome:** CO2 (Sessions 15–26: Strings, Collections, Generics, Ordering)
 - **Student Name:** Logeshwaran R
 - **Register Number:** 192511175
-- **Faculty / Guide:** Dr. MD BOOMIJA
+- **Faculty / Guide:** Dr. Mathivanan
 - **Repository Name:** `CSA0914-192511175-ASSIGNMENT2`
 - **Total Marks:** 50 Marks
 - **Java Environment:** OpenJDK 21 LTS (Microsoft HotSpot 64-Bit Server VM, build 21.0.12.1+1-LTS)

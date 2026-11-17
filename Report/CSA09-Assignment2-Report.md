@@ -9,7 +9,7 @@
 - **Assignment:** Assignment 2 (CO2: Sessions 15–26)
 - **Student Name:** Logeshwaran R
 - **Register Number:** 192511175
-- **Faculty / Guide:** Dr. MD BOOMIJA
+- **Faculty / Guide:** Dr. Mathivanan
 - **Repository Link:** `https://github.com/logeswaranraj27/JAVA-PROGRAMING/tree/CSA0914-192511175-ASSIGNMENT2`
 - **Java Environment:** OpenJDK 21 LTS (Microsoft HotSpot build 21.0.12.1+1-LTS)
 - **Platform:** Windows x64

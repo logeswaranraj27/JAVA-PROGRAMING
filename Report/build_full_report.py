@@ -54,7 +54,7 @@ def generate_report():
 - **Assignment:** Assignment 2 (CO2: Sessions 15–26)
 - **Student Name:** Logeshwaran R
 - **Register Number:** 192511175
-- **Faculty / Guide:** Dr. MD BOOMIJA
+- **Faculty / Guide:** Dr. Mathivanan
 - **Repository Link:** `https://github.com/logeswaranraj27/JAVA-PROGRAMING/tree/CSA0914-192511175-ASSIGNMENT2`
 - **Java Environment:** OpenJDK 21 LTS (Microsoft HotSpot build 21.0.12.1+1-LTS)
 - **Platform:** Windows x64
@@ -286,7 +286,10 @@ The experimental findings in this project prove that selecting the appropriate c
     print(f"[SUCCESS] Markdown report generated at {md_path}")
 
     # Generate Professional OpenXML .docx Document
-    generate_docx_file('Report/CSA09-Assignment2-Report.docx', q1_rows, q2_rows, q4_rows, q6_rows, q7_rows)
+    try:
+        generate_docx_file('Report/CSA09-Assignment2-Report.docx', q1_rows, q2_rows, q4_rows, q6_rows, q7_rows)
+    except PermissionError:
+        print("[WARNING] Could not update Report/CSA09-Assignment2-Report.docx because it is currently open in Word/another application.")
 
 def generate_docx_file(filename, q1_rows, q2_rows, q4_rows, q6_rows, q7_rows):
     print(f"Generating Microsoft Word .docx document: {filename}...")
@@ -391,7 +394,7 @@ def generate_docx_file(filename, q1_rows, q2_rows, q4_rows, q6_rows, q7_rows):
     body_xml.append(p("Course: Programming in Java - CSA0914 (CO2: Sessions 15–26)", bold=False, size=22, align="center", space_after=80))
     body_xml.append(p("Student Name: Logeshwaran R", bold=True, size=22, align="center", space_after=80))
     body_xml.append(p("Register Number: 192511175", bold=True, size=22, align="center", space_after=80))
-    body_xml.append(p("Faculty / Guide: Dr. MD BOOMIJA", bold=True, size=22, color="2C3E50", align="center", space_after=80))
+    body_xml.append(p("Faculty / Guide: Dr. Mathivanan", bold=True, size=22, color="2C3E50", align="center", space_after=80))
     body_xml.append(p("Repository: CSA0914-192511175-ASSIGNMENT2", bold=False, size=22, color="2980B9", align="center", space_after=80))
     body_xml.append(p("Java Runtime: OpenJDK 21 LTS (HotSpot 64-Bit Server VM)", bold=False, size=22, align="center", space_after=80))
     body_xml.append(p("Evaluation Marks: 50 Marks Total", bold=True, size=22, color="27AE60", align="center", space_after=600))
