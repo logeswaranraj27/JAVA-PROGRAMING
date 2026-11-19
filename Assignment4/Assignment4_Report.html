@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Assignment 4 Report - CO4</title><link rel="stylesheet" href="../assignment-report.css"></head><body>
+<section class="cover">
+  <div class="cover-top"><div class="institution">SIMATS ENGINEERING</div><div>PROGRAMMING IN JAVA • COURSE CODE CSA09</div></div>
+  <div class="cover-title"><div class="course">ASSIGNMENT 4 • COURSE OUTCOME CO4</div><h1>EVENT-DRIVEN<br>GUI DESIGN</h1><h2>Individual Assignment Report</h2>
+    <table class="meta"><tr><td>Student</td><td>Logeshwaran R</td></tr><tr><td>Register number</td><td>192511175</td></tr><tr><td>Faculty / Guide</td><td>Sanjay Mathivanan</td></tr><tr><td>Duration / Marks</td><td>One week / 50 marks</td></tr><tr><td>Java version</td><td>Java 17+ intended; local compiler verification pending</td></tr><tr><td>Repository target</td><td>https://github.com/logeswaranraj27/JAVA-PROGRAMING/tree/assignment-4 (not verified)</td></tr></table>
+  </div><div class="cover-foot">Prepared against the Assignment 4 – CO4 brief. Submission date: __________________</div>
+</section>
+<h2>Contents</h2><ol class="toc"><li>Workflow and evidence status</li><li>Task 1 — Fee-payment design review</li><li>Task 2 — Appointment desk design</li><li>Task 3 — Library search layout</li><li>Task 4 — Drawing-pad event forensics</li><li>Task 5 — Currency converter event styles</li><li>Task 6 — Campus event registration</li><li>Conclusion and submission checklist</li></ol>
+
+<h2>1. Workflow and evidence status</h2>
+<p>This report follows Interpret → Identify → Design → Implement → Trace → Challenge → Refine. The task folder contains Swing source for the library layout (Task03), drawing pad (Task04), and lambda converter (Task05), plus a Task06 schema. Full appointment and fee-service implementations, all four converter variants, complete event registration layers, screenshots and successful program/database execution are not present or verified.</p>
+<div class="callout"><b>Evidence integrity:</b> the assignment PDF defines expected behavior, but no GUI was launched, resized, exercised or captured for this report. Test cases below describe planned/expected checks, not observed results. Task06 database queries and performance comparisons likewise remain unexecuted. Verify with a local MySQL test database before submission.</div>
+<p>Event-driven GUI design separates user-interface event handling from application services and persistence. Swing UI changes belong on the Event Dispatch Thread (EDT); long-running database work should run in a background worker.</p>
+
+<h2>2. Task 1 — GUI design review: fee payment</h2>
+<h3>Diagnosis</h3>
+<table><tr><th>Design defect</th><th>Impact</th><th>Refinement</th></tr>
+<tr><td>One listener contains all actions and logic</td><td>Tightly coupled; difficult to test and extend</td><td>Use named actions/services and focused handlers</td></tr>
+<tr><td>Strings compared with ==</td><td>Reference identity can differ from text equality</td><td>Use constant-first equals or enum selections</td></tr>
+<tr><td>No validation</td><td>Empty, malformed or negative amounts reach processing</td><td>Validate required fields and numeric range in service</td></tr>
+<tr><td>Database work/sleep in handler</td><td>Freezes EDT; window stops repainting/responding</td><td>Use SwingWorker; do not sleep in UI handler</td></tr>
+<tr><td>No clear feedback or receipt flow</td><td>User cannot tell success/failure or obtain receipt</td><td>Display status and enable receipt only on success</td></tr>
+<tr><td>SQL assembled from input</td><td>Unsafe query construction and escaping errors</td><td>PreparedStatement parameters</td></tr>
+<tr><td>Resources/errors not managed</td><td>Leaks connections and hides failure causes</td><td>try-with-resources and user-safe error mapping</td></tr></table>
+<p><b>Class structure:</b> <code>FeePaymentFrame</code> collects/displays data; <code>FeeService</code> validates amount, invokes payment operation and returns a result; <code>FeeRepository</code> owns database access; <code>ReceiptView</code> renders a confirmed result. Event handlers translate UI actions into service calls, not SQL.</p>
+<pre>Pay Action → validate form → SwingWorker.doInBackground()
+          → FeeService.pay(request) → FeeRepository (JDBC)
+          → done(): show status / enable receipt on EDT</pre>
+<p>Use one shared listener only when actions truly share behavior; separate listener objects or Swing <code>Action</code> instances improve reuse and enable/disable state consistency. <span class="note">100-word design defense: A payment window should own presentation only. The handler validates basic field presence, then delegates payment rules to FeeService and persistence to FeeRepository. A background worker protects the EDT from database latency. Parameterized SQL, transactions, resource closure and typed results make failures predictable. The UI displays a safe status message and exposes a receipt only after successful confirmation. Separating these responsibilities makes the service independently testable and keeps database changes from altering the window.</span></p>
+
+<h2>3. Task 2 — Hospital appointment desk</h2>
+<table><tr><th>Event source</th><th>Event object</th><th>Listener</th><th>Action</th></tr>
+<tr><td>Department JComboBox</td><td>ActionEvent</td><td>ActionListener</td><td>Refresh doctor choices for selected department</td></tr>
+<tr><td>Book JButton</td><td>ActionEvent</td><td>ActionListener</td><td>Validate fields, request booking, show result</td></tr>
+<tr><td>Cancel JButton</td><td>ActionEvent</td><td>ActionListener</td><td>Clear/close without booking</td></tr>
+<tr><td>Window</td><td>WindowEvent</td><td>WindowListener/WindowAdapter</td><td>Confirm close and release UI resources</td></tr></table>
+<pre>JFrame AppointmentFrame (BorderLayout)
+├── JPanel form (GridBagLayout): patient, department, doctor, date/time
+├── JPanel actions (FlowLayout): Book, Clear, Cancel
+└── JLabel status (SOUTH)</pre>
+<p><b>Refresh pseudocode:</b> on department selection, read department ID; mark doctor selector busy; load matching doctors via service; replace selector model; display empty/error state; restore enabled status. For asynchronous access, perform loading off EDT and publish model changes on EDT.</p>
+<p><b>Book pseudocode:</b> read form; validate required values/date and doctor-department match; if invalid show field-specific feedback and stop; invoke appointment service; prevent duplicate booking with a database constraint/transaction; on success show confirmation, otherwise map conflict/database error to a clear message.</p>
+<pre>main → SwingUtilities.invokeLater → construct frame → pack/show
+user event → registered listener → handler → service → repository
+close request → windowClosing → optional confirmation → dispose
+windowClosed → final cleanup (if required)</pre>
+<p>Unlike applet callbacks <code>init()</code>, <code>start()</code>, <code>paint()</code>, <code>stop()</code>, <code>destroy()</code>, a desktop Swing window is created explicitly, receives events while displayed, and is disposed by application logic. Loading doctors from a DB for each change is O(d) per query plus network latency and can show fresh data; loading once into a Map costs O(D) startup time/storage and gives expected O(1) department lookup, but can become stale and uses memory.</p>
+
+<h2>4. Task 3 — Campus library layout</h2>
+<pre>JFrame BorderLayout
+├── NORTH: JPanel BorderLayout
+│   ├── NORTH: title label, FlowLayout(CENTER)
+│   └── SOUTH: search row, FlowLayout(LEFT): text field, Choice, Search
+├── CENTER: scrollable results list/table (expands on resize)
+└── SOUTH: buttons + status (FlowLayout)</pre>
+<p>BorderLayout gives the results center the available extra space. The nested search and button rows use FlowLayout to preserve their preferred component sizes. GridLayout would force equal-sized cells and CardLayout is intended for swapping views, not this fixed screen. The current Task03 Swing implementation has a title/search container north, scrollable results center and footer south. Resize testing is specified at small, default and large sizes; no screenshots or actual measurements were captured.</p>
+<p>Nested layouts are simple and resilient for grouped rows. GridBagLayout offers precise constraints but needs more setup. Absolute positioning breaks when fonts, display scaling, localization or window size change. Results should grow while search/footer rows retain preferred size.</p>
+
+<h2>5. Task 4 — Drawing-pad event forensics</h2>
+<p>A mouse listener fails if the wrong callback name/signature is supplied or the listener is not registered. A click label remains unchanged if the handler updates the wrong object/property. Drawing directly only inside the event handler is transient: repainting after minimize/restore clears pixels unless points are retained and redrawn. In Swing, override <code>paintComponent</code>, call <code>super.paintComponent</code>, and draw the saved model; repaint requests a later paint pass.</p>
+<pre>on mouseClicked(event):
+  points.add(event.getPoint())
+  label.setText("Clicks: " + points.size())
+  repaint()
+paintComponent(g):
+  super.paintComponent(g)
+  for point in points: draw dot at point</pre>
+<p>The Task04 source uses <code>MouseAdapter</code>, stores <code>Point</code> objects, updates a label and redraws in <code>paintComponent</code>. <code>@Override</code> makes a misspelled/nonmatching method fail compilation instead of silently creating an unused method. Points use O(k) memory for k clicks; repainting draws O(k) dots. A BufferedImage also preserves pixels but uses O(width × height) pixel storage and is useful for raster drawing/large histories. Required before/after-minimize screenshots remain pending.</p>
+
+<h2>6. Task 5 — Currency converter event styles</h2>
+<p>Four implementations should perform the same conversion and validation: (1) frame implements ActionListener, (2) named inner class, (3) anonymous inner class, and (4) lambda. Each registers the Convert button and amount field’s Enter action; <code>WindowAdapter.windowClosing</code> disposes the frame. The lambda reduces boilerplate for a single-method listener; named classes are reusable and easier to test independently; anonymous classes can access enclosing fields but are verbose; implementing on the frame can mix presentation and event roles. A method reference or shared Swing Action is appropriate when a named operation or reused command is needed.</p>
+<p>The existing Task05 lambda source converts using illustrative fixed rates (USD 83 INR, EUR 90 INR); these are demonstration constants, not live financial rates. It rejects invalid/negative input and displays a dialog. Valid and invalid test cases are amount 10 USD→INR (expected 830.00 with the sample rate) and nonnumeric input (error dialog). These are expected behavior, not observed screenshots. Code-change counts across versions were not measured; compare by counting changed/added lines in the actual variants.</p>
+
+<h2>7. Task 6 — Campus event registration design challenge</h2>
+<h3>Users, screens and layers</h3>
+<p>Users: students register; committee members filter and export. Screens: registration form, event list, committee registration table, filter controls, validation/confirmation dialogs. Data: event, student identity, registration and timestamp. Requirements: validate required fields, reject duplicate student/event pairs, show useful messages, preserve responsiveness, export the filtered view.</p>
+<pre>UI: RegistrationFrame / CommitteeFrame / dialogs
+ ↓
+Service: RegistrationService.validate/register/filter/export
+ ↓
+DAO: EventDao / RegistrationDao (PreparedStatement, transactions)
+ ↓
+MySQL tables with foreign key and UNIQUE(student_id, event_id)</pre>
+<p><b>Register pseudocode:</b> validate request; call service in SwingWorker; begin transaction; insert registration using parameterized SQL; let unique constraint reject duplicates; commit; in case of failure rollback and map unique conflict to “already registered”; update UI on EDT. <b>Filter pseudocode:</b> validate selected event/page; run parameterized SELECT off EDT; use <code>LIMIT ? OFFSET ?</code>; publish rows and page status on EDT. Export the same filtered query/result set without blocking the UI.</p>
+<pre>CREATE TABLE registrations (
+  registration_id INT PRIMARY KEY AUTO_INCREMENT,
+  student_name VARCHAR(100) NOT NULL,
+  register_number VARCHAR(30) NOT NULL,
+  event_id INT NOT NULL,
+  registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (register_number, event_id),
+  FOREIGN KEY (event_id) REFERENCES events(event_id)
+);</pre>
+<p>The provided Task06 schema currently uses student_name/event_id as its uniqueness key and provides a foreign key; for a production design, register number or a stable student key is preferable to a mutable/display name. Loading 100,000 rows at once costs O(n) transfer time and O(n) client memory and can stall the EDT if done synchronously. Paginating with LIMIT/OFFSET bounds each page’s client memory to O(page size), but large offsets may still require DB work proportional to the skipped rows. Keyset pagination can improve deep-page access when allowed. Use SwingWorker for query execution and update Swing models only on EDT. No MySQL connection, duplicate/invalid registration test, export or latency measurement was executed.</p>
+
+<h2>8. Conclusion and submission checklist</h2>
+<p>The six tasks illustrate event-source/listener tracing, layout managers, repaint-safe drawing, listener alternatives and layered GUI/database design. Before submission, add the missing Task01/02/06 implementations and converter variants; compile and run every task; capture resize, minimize/restore, valid/invalid and duplicate-registration evidence; measure pagination behavior; verify SQL and actual repository link; add README and progressive commits. This document deliberately does not claim unperformed execution.</p>
+</body></html>
