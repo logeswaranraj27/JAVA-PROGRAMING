@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Assignment 5 Report - CO5</title><link rel="stylesheet" href="../assignment-report.css"></head><body>
+<section class="cover">
+  <div class="cover-top"><div class="institution">SIMATS ENGINEERING</div><div>PROGRAMMING IN JAVA • COURSE CODE CSA09</div></div>
+  <div class="cover-title"><div class="course">ASSIGNMENT 5 • COURSE OUTCOME CO5</div><h1>DATA PERSISTENCE<br>ENGINEERING</h1><h2>Files and Databases • Individual Report</h2>
+    <table class="meta"><tr><td>Student</td><td>Logeshwaran R</td></tr><tr><td>Register number</td><td>192511175</td></tr><tr><td>Faculty / Guide</td><td>Sanjay Mathivanan</td></tr><tr><td>Duration / Marks</td><td>One week / 50 marks</td></tr><tr><td>Java version</td><td>Java 17+ intended; local compiler verification pending</td></tr><tr><td>Repository target</td><td>https://github.com/logeswaranraj27/JAVA-PROGRAMING/tree/assignment-5 (not verified)</td></tr></table>
+  </div><div class="cover-foot">Prepared against the Assignment 5 – CO5 brief. Submission date: __________________</div>
+</section>
+<h2>Contents</h2><ol class="toc"><li>Scope and evidence status</li><li>Part A — Persistence design and pseudocode (A1–A5)</li><li>Part B — Implementation and investigation (B1–B4)</li><li>Engineering decision and submission checklist</li></ol>
+
+<h2>1. Scope and evidence status</h2>
+<p>CO5 concerns Java I/O, serialization and JDBC. Part A below uses algorithmic pseudocode rather than substituting Java programs. Part B discusses the supplied Java implementations in the task tree and the measurements required by the assignment.</p>
+<div class="callout"><b>Evidence integrity:</b> the source PDFs specify expected outputs and input sizes. No local Java compile/run, MySQL session, database inspection, screenshots or performance measurements were verified. Numerical timings and database results are therefore intentionally not invented; tables identify the required measurements and expected checks.</div>
+<p>The available task tree includes a bus-pass file store and line counter under B1, a JDBC loader/schema under B3, and schemas for event registration. The other requested parts are design content in this report and require student execution/evidence before submission.</p>
+
+<h2>2. Part A — Persistence design and pseudocode</h2>
+<h3>A1 — File format design</h3>
+<p><b>Text record:</b> one UTF-8 line containing passId, registerNumber, name, routeNumber, boardingStop, ISO validityDate and decimal amount. A robust delimited format must quote/escape delimiters, quotes and newlines; naive comma splitting is only safe if fields prohibit commas/newlines. A damaged record is rejected and logged by line number while scanning continues. Missing file is distinguished from an empty file. To reduce power-loss damage, write a complete replacement to a temporary file, flush/close it, then atomically move it over the original where supported; append-only records can additionally use checksums/recovery markers.</p>
+<p><b>Binary layout with DataOutputStream:</b> file header (magic, format version); record count or length-prefixed records; UTF-8 field lengths and bytes (or documented writeUTF constraints); date as epoch-day integer; amount as integer cents or a fixed decimal representation. Validate lengths and version before allocating/reading. A truncated final record is detected as EOF inside a record and reported, not silently treated as valid.</p>
+<p><b>SIMATS-style pseudocode — structured and language-independent:</b></p>
+<pre>ALGORITHM AddPass
+INPUT: pass record P, file path F
+OUTPUT: success or validation/I-O failure
+BEGIN
+  VALIDATE required fields and amount of P
+  OPEN F in append mode with buffered UTF-8 writer
+  ENCODE P using documented escaping
+  WRITE encoded record and line terminator
+  FLUSH and CLOSE writer
+  RETURN success
+END</pre>
+<pre>ALGORITHM FindPass
+INPUT: pass identifier ID, file path F
+OUTPUT: matching pass or NOT_FOUND
+BEGIN
+  IF F does not exist THEN RETURN NOT_FOUND
+  OPEN F with buffered reader
+  FOR each line L with line number
+    PARSE L; IF malformed THEN record diagnostic; CONTINUE
+    IF parsed pass identifier equals ID THEN CLOSE; RETURN pass
+  END FOR
+  CLOSE; RETURN NOT_FOUND
+END</pre>
+<pre>ALGORITHM ListRoute
+INPUT: route number R, file path F
+OUTPUT: all valid pass records for R
+BEGIN
+  OPEN F with buffered reader
+  FOR each line L
+    PARSE L; IF malformed THEN record diagnostic; CONTINUE
+    IF parsed route equals R THEN EMIT parsed pass
+  END FOR
+  CLOSE
+END</pre>
+<p>For n records, sequential add is O(1) amortized append (excluding storage/flush costs); find and list are O(n) time, O(1) scan memory. Fixed-length RandomAccessFile records enable direct offset lookup O(1) when the key maps to a known slot, but impose fixed field capacity and costly shifts/reorganization for variable-length data. A separate index is needed for arbitrary IDs.</p>
+
+<h3>A2 — Buffered I/O</h3>
+<p>A 50 MiB file is 52,428,800 bytes; a one-byte read loop makes that many Java read calls. Buffering in 8 KiB chunks needs about 6,400 buffer refills (ceil(52,428,800 / 8,192)); actual OS calls depend on the stream implementation and are not exactly equal to Java reads. Buffering amortizes call overhead. It helps little for already-buffered streams, very small in-memory files, or workloads dominated by computation/network latency.</p>
+<pre>ALGORITHM CountLinesBuffered
+INPUT: file F
+OUTPUT: number of text lines
+BEGIN
+  count ← 0
+  OPEN F using buffered character reader
+  WHILE next line exists
+    count ← count + 1
+  END WHILE
+  CLOSE F; RETURN count
+END</pre>
+<p>Streaming buffered count is O(n) time and O(buffer-size) auxiliary memory. <code>Files.readAllLines()</code> is O(n) time but O(n) memory for all strings/list overhead; it is convenient for small files, risky for 50 MiB or larger inputs. Correct line semantics must count a final unterminated line consistently. Benchmark cold/warm runs across multiple file sizes and report environment and repeated measurements; none were captured.</p>
+
+<h3>A3 — Generic DAO design</h3>
+<p>Common operations in StudentDB, CourseDB and MarksDB are connection acquisition, parameter binding, execution, mapping ResultSet rows to objects, resource closure and error translation. Table names, key fields, columns and row mapping differ.</p>
+<pre>INTERFACE Dao&lt;T, K&gt;
+  insert(entity: T): result
+  findById(id: K): optional T
+  findAll(): list of T
+  update(entity: T): result
+  delete(id: K): result
+END INTERFACE</pre>
+<p><code>StudentDao implements Dao&lt;Student, Integer&gt;</code>. Example mapping: Student.id → student.student_id primary key; name → student.name; registerNumber → student.register_number; courseId → student.course_id. SQL stays in the DAO; service/GUI code depends on the interface. A generic DAO reduces duplicated mechanics but should not erase genuinely table-specific query intent. Direct SQL in services/GUI tightly couples persistence and behavior and makes testing/reuse harder.</p>
+
+<h3>A4 — Serialization design</h3>
+<p><code>Hostel</code> serialization traverses its reachable serializable object graph, including rooms and residents. Every non-transient reachable object must support serialization, otherwise serialization fails. A live JDBC <code>Connection</code> must be transient because it represents a process/resource handle and is not portable. A password should not be serialized at all; if a legacy class still has it, mark it transient and use a credential vault/rehydration mechanism instead. A phone number is ordinary persisted data, but adding it changes the class schema: define an explicit <code>serialVersionUID</code>, provide compatible defaults/migration, and test old fixtures. Native Java serialization is Java-specific and can be unsafe for untrusted input; CSV/JSON are inspectable and interoperable but need explicit versioning, escaping and validation.</p>
+
+<h3>A5 — Transaction correctness and SQL safety</h3>
+<pre>ALGORITHM Transfer
+INPUT: source wallet S, destination wallet D, amount A
+OUTPUT: committed transfer or failure without partial balance change
+BEGIN
+  VALIDATE A > 0 and S ≠ D
+  OPEN connection; DISABLE auto-commit
+  TRY
+    UPDATE S balance = balance - A WHERE balance ≥ A
+    IF affected rows ≠ 1 THEN RAISE transfer failure
+    UPDATE D balance = balance + A
+    IF affected rows ≠ 1 THEN RAISE transfer failure
+    COMMIT
+  CATCH any database/validation failure
+    ROLLBACK; REPORT failure
+  FINALLY restore auto-commit and CLOSE connection
+END</pre>
+<p>Two independent auto-commit updates can debit successfully and fail before credit, losing value. A single transaction commits both or rolls both back. Concatenating user input into login SQL allows input to alter query structure; this is prevented with <code>PreparedStatement</code> placeholders, bound parameters, least-privilege accounts and generic failure messages. The assignment's unsafe and safe versions should be tested only against a disposable local database. No literal bypass input is reproduced here.</p>
+
+<h2>3. Part B — Implementation and investigation</h2>
+<h3>B1 — Bus-pass file store and line-count measurements</h3>
+<p>The supplied <code>PassStore</code> exposes add, find and list-by-route; it uses buffered UTF-8 I/O and skips damaged records. Expected supplied-example check: find returns the P1003 pass, then null for a malformed P1002 line. This output is from the assignment specification, not a local execution. The current comma-separated encoding does not safely support commas/newlines inside fields; use CSV escaping or a length-prefixed format for unrestricted data. Malformed field counts and nonnumeric amounts should be logged with line number and skipped without aborting later records.</p>
+<table><tr><th>Experiment</th><th>Input scale</th><th>Buffered time</th><th>Unbuffered time</th><th>Result</th></tr>
+<tr><td>Line counter</td><td>1 MiB</td><td>Not measured</td><td>Not measured</td><td>Record equality and repeated timings</td></tr>
+<tr><td>Line counter</td><td>10 MiB</td><td>Not measured</td><td>Not measured</td><td>Record equality and repeated timings</td></tr>
+<tr><td>Line counter</td><td>50 MiB</td><td>Not measured</td><td>Not measured</td><td>Record equality and repeated timings</td></tr>
+<tr><td>Pass search</td><td>1k / 10k / 100k records</td><td colspan="2">Not measured</td><td>Record search latency and hit/miss correctness</td></tr></table>
+<p>A file scan for q searches over n records is O(qn), O(1) extra scan memory. Loading once to a HashMap costs expected O(n) build time and O(n) memory, then expected O(q) lookup: O(n+q). A hash index must be rebuilt/updated consistently. Test missing file, absent ID, wrong field count, invalid amount and empty line.</p>
+
+<h3>B2 — Adversarial input and local database</h3>
+<table><tr><th>Test</th><th>Expected safe behavior</th><th>Interpretation</th></tr>
+<tr><td>Ordinary valid credentials</td><td>Only matching account authenticates</td><td>Baseline correctness</td></tr><tr><td>Wrong password / malformed input</td><td>Reject with generic message</td><td>Input does not change query structure</td></tr><tr><td>Quote/boolean-like adversarial text</td><td>PreparedStatement treats it as parameter data and rejects nonmatching credentials</td><td>Unsafe concatenation is structurally vulnerable; do not use in production</td></tr><tr><td>Damaged pass line: wrong count</td><td>Skip and log record</td><td>Parser validates shape</td></tr><tr><td>Nonnumeric amount or empty line</td><td>Skip and log, continue next record</td><td>Parser validates type and empties</td></tr></table>
+<p>Create a disposable local test database with dummy accounts only. Compare the intentionally unsafe demonstration query to the parameterized query under isolated test conditions. The database and login tests were not run for this report, so actual authentication results are pending.</p>
+
+<h3>B3 — JDBC performance comparison</h3>
+<p>The supplied schema defines <code>bus_pass</code> with a string primary key, required identity/route/date fields and DECIMAL amount. <code>PassLoader</code> contains Statement, PreparedStatement and batch routines; the batch method disables auto-commit, executes groups of 1,000, commits on success and rolls back on SQL failure. Its current main method requests a batch of 1,000. Credentials are placeholders and must be supplied safely outside source.</p>
+<table><tr><th>Method / size</th><th>1,000 rows</th><th>10,000 rows</th><th>100,000 rows</th><th>Measured outcome</th></tr>
+<tr><td>Statement; auto-commit</td><td>Pending</td><td>Pending</td><td>Pending</td><td>No measurements</td></tr><tr><td>PreparedStatement; auto-commit</td><td>Pending</td><td>Pending</td><td>Pending</td><td>No measurements</td></tr><tr><td>PreparedStatement batch + transaction</td><td>Pending</td><td>Pending</td><td>Pending</td><td>No measurements</td></tr></table>
+<p>Verify small 10-row cases using SELECT and ResultSetMetaData (column label/type); run the specified scales with the same machine, DB configuration, transaction policy and repeated trials. Force a validation failure halfway inside a transaction, roll back and verify row count is unchanged. Prepared statements separate values from SQL and can reuse a compiled statement; batching reduces round trips; Statement is least appropriate for values. A nightly 100k import should normally use validated PreparedStatement batches within deliberate transaction chunks (or a DB bulk loader after validation); issuing one pass can use a single prepared insert and short transaction. LOAD DATA and multi-row INSERT may be faster but require operational controls and the assignment's measured comparison.</p>
+
+<h3>B4 — Migration and final engineering decision</h3>
+<pre>ALGORITHM MigratePassFile
+INPUT: source file F, JDBC connection C, batch size B
+OUTPUT: inserted count and validation-failure report
+BEGIN
+  READ database/driver metadata; list tables
+  BEGIN transaction
+  FOR each input record
+    PARSE and VALIDATE; IF invalid THEN log source line and CONTINUE
+    BIND values to PreparedStatement; add to batch
+    IF batch size reached THEN EXECUTE batch; update counts
+  END FOR
+  EXECUTE remaining batch; COMMIT
+  ON database failure: ROLLBACK and report failure
+  CLOSE all resources
+END</pre>
+<p>At 12 campuses and 100× the current volume, a shared relational database is the preferred system of record for concurrent counters, cross-campus queries, constraints, transactions, backup and access control. A single text file is simple but scans linearly and has weak concurrency/update guarantees. Java serialization is language/runtime-coupled and unsuitable as a shared multiuser datastore. Separate per-campus serialized files offer isolation but complicate global search, schema migration, recovery and consistent reporting. Preserve raw files as import/archive data, validate them, then migrate in bounded batches; make imports idempotent and report rejected records.</p>
+
+<h2>4. Engineering decision and submission checklist</h2>
+<p>Persistence choice should be based on integrity, concurrent access, query needs, recovery and measurements, not only write speed. Buffered streams are appropriate for sequential text access; prepared statements and explicit transactions are necessary for database correctness. Before final submission, complete database setup and B2–B4 executions, collect benchmark CSV/raw values, confirm rollback behavior and metadata output, capture genuine screenshots, compile/run each program, and add README details and working repository link. The report's pending data must be replaced with observations rather than estimates presented as measured results.</p>
+</body></html>
