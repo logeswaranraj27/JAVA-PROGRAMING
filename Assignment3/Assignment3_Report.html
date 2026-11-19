@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Assignment 3 Report - CO3</title><link rel="stylesheet" href="../assignment-report.css"></head><body>
+<section class="cover">
+  <div class="cover-top"><div class="institution">SIMATS ENGINEERING</div><div>PROGRAMMING IN JAVA • COURSE CODE CSA09</div></div>
+  <div class="cover-title"><div class="course">ASSIGNMENT 3 • COURSE OUTCOME CO3</div><h1>EXCEPTION HANDLING<br>&amp; MULTITHREADING</h1><h2>Joint Pair-Work Report</h2>
+    <table class="meta"><tr><td>Student A</td><td>Logeshwaran R — 192511175</td></tr><tr><td>Student B</td><td>Barath — 192324302</td></tr><tr><td>Faculty / Guide</td><td>Sanjay Mathivanan</td></tr><tr><td>Duration / Marks</td><td>One week / 50 marks</td></tr><tr><td>Java version</td><td>Java 17+ intended; local compiler verification pending</td></tr><tr><td>Repository target</td><td>https://github.com/logeswaranraj27/JAVA-PROGRAMING/tree/assignment-3 (not verified)</td></tr></table>
+  </div><div class="cover-foot">Prepared against the Assignment 3 – CO3 brief. Submission date: __________________</div>
+</section>
+<h2>Contents</h2><ol class="toc">
+<li>Purpose, scope and verification status</li><li>Q1 — ATM failure handling</li><li>Q2 — Exceptions and propagation</li><li>Q3 — Resource safety and debugging</li><li>Q4 — Threads and lifecycle</li><li>Q5 — Cinema seat-booking race</li><li>Q6 — Deadlock and producer-consumer</li><li>Q7 — Concurrent fault-tolerant processor</li><li>Individual contribution record, test plan and conclusion</li></ol>
+
+<h2>1. Purpose, scope and verification status</h2>
+<p>This report analyzes the seven CO3 questions on exception handling and multithreading. It distinguishes design answers and expected behavior from measurements. The task source tree currently contains the supplied-code solutions for Q1, Q2, Q5 and Q6; the remaining questions require their design/implementation evidence to be added.</p>
+<div class="callout"><b>Evidence integrity:</b> the source PDFs give expected outputs, but no successful local Java compile/run, debugger session, execution screenshots, ten-run data, or benchmark results were verified for this report. Expected outputs below are labeled as such. Replace pending evidence with actual observations before submission. The required per-student executions and repository links also remain unverified.</div>
+<p>Java distinguishes recoverable conditions represented by exceptions from serious VM-level errors. Checked exceptions must be caught or declared; unchecked exceptions derive from <code>RuntimeException</code>. Catch the most specific types first, preserve the original cause when translating layers, and use resource constructs that close reliably.</p>
+
+<h2>2. Q1 — Handling failure in a bank ATM simulation</h2>
+<h3>Failure model and exception hierarchy</h3>
+<pre>Throwable
+├── Error                         (VM/resource failure; normally not caught)
+└── Exception
+    ├── IOException               (checked; card-reader file failure)
+    └── RuntimeException          (unchecked)
+        ├── InputMismatchException (non-numeric Scanner token)
+        └── IllegalArgumentException (negative amount / invalid request)
+InsufficientBalanceException extends Exception (checked business failure)</pre>
+<table><tr><th>Failure</th><th>Classification</th><th>Handling</th></tr>
+<tr><td>Letters entered where integer expected</td><td>Unchecked InputMismatchException</td><td>Input-specific catch; ask for valid input</td></tr><tr><td>Negative withdrawal</td><td>Unchecked IllegalArgumentException</td><td>Validate and reject</td></tr><tr><td>Amount exceeds balance</td><td>Checked InsufficientBalanceException</td><td>Business-rule catch; no debit</td></tr><tr><td>Missing card-reader file</td><td>Checked FileNotFoundException / IOException</td><td>Report service unavailable; close opened resources</td></tr><tr><td>Out-of-memory or VM failure</td><td>Error</td><td>Not treated as an ordinary customer error</td></tr></table>
+<p>The provided ATM example catches input, insufficient-funds and invalid-amount errors separately; the card-reader failure belongs in a separate checked-I/O path if file access is implemented. Specific catches precede broad catches because Java rejects unreachable catches and specific handling preserves useful recovery. A finally block runs during normal or exceptional control flow, but cannot guarantee execution after process termination or VM failure; use it for session cleanup, not business logic.</p>
+<h3>Tests and alternative</h3>
+<table><tr><th>Test input</th><th>Expected path</th><th>Finally</th></tr><tr><td>1000</td><td>Success; balance becomes 4000</td><td>Runs</td></tr><tr><td>6000</td><td>InsufficientBalanceException</td><td>Runs</td></tr><tr><td>-1</td><td>IllegalArgumentException</td><td>Runs</td></tr><tr><td>letters</td><td>InputMismatchException</td><td>Runs</td></tr><tr><td>Missing reader file</td><td>IOException path (when implemented)</td><td>Runs if caught/propagated through the session</td></tr></table>
+<p>One broad <code>catch (Exception)</code> may be acceptable at a process boundary for logging and graceful termination after narrower expected failures are handled. Used alone, it hides cause-specific recovery and can turn programming defects into misleading input messages. Pre-validation with <code>hasNextInt()</code> and explicit result codes avoids exceptions for routine bad input; both approaches are O(1) time and O(1) auxiliary space per attempt. Exception construction/stack capture has greater constant cost, but does not change asymptotic complexity. No stack trace was captured in this run; capture one from an intentionally uncaught development test, not a production ATM session.</p>
+
+<h2>3. Q2 — User-defined exceptions and propagation</h2>
+<pre>ExamException (checked)
+└── SubmissionStorageException (checked; wraps IOException)
+    Controller → ExamService → Storage.save(...)
+    IOException → SubmissionStorageException(cause) → ExamException handler</pre>
+<p>Use checked exceptions for expected domain failures that callers can recover from: closed exam, missing course registration, and storage/quota rejection. Use unchecked exceptions for violated programmer/API preconditions. Translate low-level I/O into a domain-level message at the storage boundary while retaining the cause for logs and diagnosis. The controller presents a safe, actionable message rather than an operating-system path or raw I/O detail.</p>
+<p><b>Completed-code result (expected by the assignment):</b> <code>Saved answer01.pdf</code>, then <code>Error: Could not store answer02.pdf</code> and <code>Cause: Disk quota exceeded</code>. The implementation in <code>Task02/StorageDemo.java</code> wraps the IOException with its cause. Without the cause constructor, <code>getCause()</code> is null; dereferencing it would itself fail, and the original diagnostic is lost. A chained stack trace shows both the storage exception and the underlying IOException; no actual runtime trace is claimed here.</p>
+<p>If the custom exceptions instead extend RuntimeException, methods need not declare them and callers are not compiler-forced to catch them. This reduces signature noise but makes recovery obligations less visible. Stack capture is proportional to stack depth; chaining retains the cause object and its trace, increasing memory by the retained trace/cause chain.</p>
+
+<h2>4. Q3 — Resource safety, debugging and robust code</h2>
+<p>Manual <code>finally { close(); }</code> is fragile if an exception occurs before every resource is registered for closure, if one close throws before later closes run, or if control paths omit a close. A deliberately failing second-store input should be used while stepping through open/read/close operations. Log the store path and failure type; count open descriptors before and after each version using a debugger/OS diagnostic. Those measurements have not been performed.</p>
+<pre>try (BufferedReader in = Files.newBufferedReader(input);
+     BufferedWriter out = Files.newBufferedWriter(summary)) {
+    // read, validate and aggregate one store at a time
+} catch (IOException e) {
+    // log store identity and report failure
+}</pre>
+<p>Try-with-resources closes resources in reverse declaration order, even after exceptions. If the body throws and close also throws, the body exception remains primary and the close failure is available through <code>getSuppressed()</code>. It is not sufficient by itself if output must be atomic, partial results must be rolled back, errors must be retried, or inputs are semantically corrupt. For <em>f</em> files and total input size <em>N</em>, processing is O(N) time. Sequential try-with-resources uses O(1) open-file handles; opening all files first can use O(f) handles. Manual closing/no closing can leak up to O(f) handles in a failure path.</p>
+
+<h2>5. Q4 — Thread creation and lifecycle</h2>
+<pre>NEW → RUNNABLE ↔ (BLOCKED / WAITING / TIMED_WAITING) → TERMINATED</pre>
+<p>A station can extend <code>Thread</code> or implement <code>Runnable</code>. Runnable separates work from the thread object and still allows extending another class, so it is generally more reusable. Call <code>start()</code> to schedule a new thread; calling <code>run()</code> is an ordinary synchronous method call. <code>sleep()</code> pauses the current thread without releasing held monitors; <code>join()</code> makes the caller wait for completion; <code>isAlive()</code> reports whether a thread has started and not terminated.</p>
+<pre>for (Thread station : stations) station.start();
+for (Thread station : stations) station.join();
+// only now compute/print the final aggregate</pre>
+<p>Completion order is scheduler- and workload-dependent; record at least ten real runs. Thread priority is only a scheduling hint, not an ordering guarantee. A daemon can be stopped when the last user thread ends, so it must not own essential final output. No run-order or priority data is reported as measured. With n scripts and p workers, idealized work time may approach O(n/p) for balanced independent batches, but I/O and coordination add overhead. An ExecutorService bounds the number of thread stacks to p rather than creating one thread per station/task.</p>
+
+<h2>6. Q5 — Cinema seat-booking race</h2>
+<p>The critical operation is the check-then-set plus increment. Without atomicity, two threads can both observe <code>booked[s] == false</code>, both set it, and both increment the count. One valid interleaving is: A checks false → B checks false → A marks/increments → B marks/increments. The supplied program expects ten seats sold for 100 attempts across ten seats; the synchronized source uses a synchronized instance method, which locks the shared <code>SeatBooking</code> instance.</p>
+<pre>public synchronized void book(int seat) {
+    if (!booked[seat]) {
+        booked[seat] = true;
+        bookingsMade++;
+    }
+}</pre>
+<p>A synchronized block on the same instance around only this critical section has equivalent correctness and may reduce lock scope if other method work is independent. A static synchronized method locks the Class object and is needed only if state is shared across all instances; otherwise a per-screen lock provides better independence. The method/block each use an intrinsic monitor. Compare 10,000 attempts and ten repeated unsynchronized runs as specified; no timing or race-count result is available. For s seats, boolean-array synchronization is O(1) per booking and O(s) state. AtomicBoolean per seat / a map with putIfAbsent / ReentrantLock can provide atomic reservation, but add object or map overhead; contention can increase latency. For 20 screens, use independent screen-level state and synchronization per screen, with a durable database uniqueness constraint for multi-process booking.</p>
+
+<h2>7. Q6 — Deadlock and inter-thread communication</h2>
+<p>Two transfers can deadlock if thread A holds wallet A and waits for B while thread B holds B and waits for A. This exhibits mutual exclusion, hold-and-wait, no preemption and circular wait. Assign every account a stable ordering key and always lock the lower key first; the rule removes circular wait. If locks are acquired with a timeout, retry or fail the transfer without applying a partial debit.</p>
+<p>For a capacity-five token counter, guard state with the same monitor and use <code>while</code>, not <code>if</code>, because a wake-up does not guarantee the condition remains true (and spurious wakeups are permitted):</p>
+<pre>put(token): synchronized
+  while count = 5: wait()
+  buffer[in] ← token; in ← (in + 1) mod 5; count ← count + 1
+  notifyAll()
+take(): synchronized
+  while count = 0: wait()
+  token ← buffer[out]; out ← (out + 1) mod 5; count ← count - 1
+  notifyAll(); return token</pre>
+<p><code>wait()</code> releases the monitor and suspends until notified; <code>sleep()</code> does not release a monitor. <code>notifyAll()</code> lets all waiters re-check their predicates; <code>notify()</code> may wake a waiter whose condition is still false and leave a suitable waiter asleep. The expected sum for tokens 1–20 is 210 and the buffer invariant is 0 ≤ count ≤ 5. The supplied Task06 implementation follows the expected algorithm, but execution is unverified. <code>ArrayBlockingQueue&lt;Integer&gt;(5)</code> encapsulates bounded blocking and is less error-prone. Put/take are O(1) amortized, storage O(5); ordered locking transfers are O(1) lock operations, with contention-dependent waiting.</p>
+
+<h2>8. Q7 — Concurrent fault-tolerant result processor</h2>
+<p><b>Measurable requirements:</b> process each input exactly once; a missing/corrupt file is recorded as a failure without stopping other files; success + failure count equals submitted count; every result/failure has an input identifier; all workers finish before the summary is emitted. Shared mutable results require a thread-safe collection.</p>
+<pre>ResultProcessor → ExecutorService(p)
+  submits Callable&lt;ProcessingResult&gt; for each score file
+  Future.get() records success or ExecutionException failure
+  concurrent result/failure collections → final immutable summary</pre>
+<p>Use a fixed pool and bounded submission strategy for 10,000 files to avoid holding unnecessary queued tasks. Each Callable opens its own input, validates it, computes one result and returns a value; catch expected per-file failures at the task boundary and include their paths. On cancellation/interruption, restore the interrupt flag and shut down the executor in a finally-safe lifecycle.</p>
+<pre>for each file: submit Callable(read → validate → compute)
+for each Future: get; add result, or record that task's failure
+assert successes + failures = input count
+shutdown; await termination; report totals and per-file failures</pre>
+<p>Measure wall-clock time for p ∈ {1, 2, 4, 8}, repeat runs, use the same fixed input set, and retain raw times, JVM/OS details and counts. No 10,000-file dataset or actual timing was run, so no fabricated speedup or recommended pool size is asserted. Parallel streams use a shared common pool and are concise but offer less explicit resource control. One thread per file uses O(n) thread stacks and can exhaust resources. ExecutorService caps thread stacks at O(p). One corrupt file is best handled per task rather than failing the entire parallel operation.</p>
+
+<h2>9. Individual contribution record and conclusion</h2>
+<table><tr><th>Question</th><th>Student A — primary responsibility in brief</th><th>Student B — primary responsibility in brief</th><th>Joint work / evidence status</th></tr>
+<tr><td>Q1</td><td>Exception hierarchy, failure table, catch order</td><td>Five tests, trace, broad-catch analysis</td><td>Both execute; execution not verified</td></tr>
+<tr><td>Q2</td><td>Hierarchy and propagation design</td><td>Scenarios and chaining evidence</td><td>Both execute; trace pending</td></tr>
+<tr><td>Q3</td><td>Debugging and resource measurements</td><td>Resource design and TWR correctness</td><td>Actual contributions must be confirmed by students</td></tr>
+<tr><td>Q4</td><td>Thread design and lifecycle</td><td>Ten-run behavior experiments</td><td>Run log pending</td></tr>
+<tr><td>Q5</td><td>Race reproduction</td><td>Synchronization comparison</td><td>Benchmark pending</td></tr>
+<tr><td>Q6</td><td>Producer-consumer design</td><td>Deadlock analysis</td><td>Expected sum 210; run pending</td></tr>
+<tr><td>Q7</td><td>Architecture design</td><td>Implementation and measurement</td><td>Pool experiment pending</td></tr></table>
+<p>Pair-work roles above reproduce the assignment’s intended primary responsibilities, not a claim that either student has completed those activities. Both students are required to execute and understand every question. The designs demonstrate exception translation, deterministic resource cleanup, synchronization and bounded concurrency. Before submission, add verified builds and outputs, screenshots, raw experimental data, student-confirmed contributions and working individual repository links.</p>
+</body></html>
